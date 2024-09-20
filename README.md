@@ -1,4 +1,4 @@
-# Import Reviews Script
+# Prepare Review Collector file to update GTIN
 
 ## Description
 
