@@ -1,5 +1,36 @@
 import pandas as pd
 import os
+import random
+import string
+import uuid
+from datetime import datetime, timedelta
+
+# -------------------------- Mock Data Generation -------------------------- #
+
+
+def generate_random_email():
+    """Generate a random email address."""
+    domains = ['example.com', 'test.com', 'mail.com', 'demo.org']
+    name_length = random.randint(5, 10)
+    name = ''.join(random.choices(string.ascii_lowercase, k=name_length))
+    domain = random.choice(domains)
+    return f"{name}@{domain}"
+
+
+def generate_random_reference():
+    """Generate a random UUID as a transaction reference."""
+    return str(uuid.uuid4())
+
+
+def generate_random_transaction_date():
+    """Generate a random transaction date within the past year."""
+    start_date = datetime.now() - timedelta(days=365)
+    random_days = random.randint(0, 365)
+    random_date = start_date + timedelta(days=random_days)
+    return random_date.strftime('%d.%m.%Y')
+
+# -------------------------- File Paths -------------------------- #
+
 
 # File paths (adjust these if your files are in different directories)
 gtin_sku_file = 'gtin_sku_from_customer.csv'
@@ -11,6 +42,8 @@ if not os.path.exists(gtin_sku_file):
     raise FileNotFoundError(f"The file '{gtin_sku_file}' does not exist.")
 if not os.path.exists(metabase_file):
     raise FileNotFoundError(f"The file '{metabase_file}' does not exist.")
+
+# -------------------------- Read and Validate CSV Files -------------------------- #
 
 # Read gtin_sku_from_customer.csv
 try:
@@ -32,7 +65,7 @@ gtin_sku_df.columns = gtin_sku_df.columns.str.lower()
 
 # Read metabase_product_export.csv with specified encoding
 try:
-    # Replace with detected encoding
+    # Replace with detected encoding if necessary
     metabase_df = pd.read_csv(metabase_file, dtype=str, encoding='ISO-8859-1')
     # Trim whitespace from headers
     metabase_df.rename(columns=lambda x: x.strip(), inplace=True)
@@ -49,6 +82,8 @@ if not required_metabase_cols.issubset(metabase_df.columns.str.lower()):
 # Normalize column names to lowercase for consistency
 metabase_df.columns = metabase_df.columns.str.lower()
 
+# -------------------------- Merge DataFrames -------------------------- #
+
 # Merge the two DataFrames on 'sku' to ensure correct GTIN assignment
 merged_df = pd.merge(
     metabase_df,
@@ -63,24 +98,26 @@ missing_gtins = merged_df[merged_df['gtin_customer'].isnull()]
 if not missing_gtins.empty:
     print("Warning: The following SKUs from 'metabase_product_export.csv' do not have corresponding GTINs in 'gtin_sku_from_customer.csv':")
     print(missing_gtins[['sku', 'name']])
-    # Optionally, you can decide to fill missing GTINs with original GTINs or leave them empty
-    # For example, using original GTINs where customer GTINs are missing:
-    # merged_df['gtin_customer'] = merged_df['gtin_customer'].fillna(merged_df['gtin_metabase'])
-    # Or set to empty string:
-    # merged_df['gtin_customer'] = merged_df['gtin_customer'].fillna('')
+    # Optionally handle missing GTINs here
 
 # Replace the GTIN in metabase data with the customer's GTIN
 merged_df['final_gtin'] = merged_df['gtin_customer'].combine_first(
     merged_df['gtin_metabase'])
 
-# Prepare the final DataFrame with required columns
-# Initialize customer-related fields as empty strings or with default values
+# -------------------------- Prepare Final DataFrame -------------------------- #
+
+# Initialize customer-related fields with mocked data
 final_df = pd.DataFrame({
-    'email': 'update_gtin@trustedshops.com',  # Populate as needed
-    'reference': 'GTIN_UPDATE',  # Populate as needed
-    'firstName': 'GTIN_UPDATE',  # Populate as needed
-    'lastName': 'GTIN_UPDATE',  # Populate as needed
-    'transactionDate': '20.09.2024',  # Populate as needed
+    # Mocked random emails
+    'email': [generate_random_email() for _ in range(len(merged_df))],
+    # Mocked random transaction IDs
+    'reference': [generate_random_reference() for _ in range(len(merged_df))],
+    # Mocked first names
+    'firstName': ['MockFirstName' for _ in range(len(merged_df))],
+    # Mocked last names
+    'lastName': ['MockLastName' for _ in range(len(merged_df))],
+    # Mocked dates
+    'transactionDate': [generate_random_transaction_date() for _ in range(len(merged_df))],
     'productName': merged_df['name'],
     'productSku': merged_df['sku'],
     'productUrl': merged_df['url'],
@@ -109,9 +146,12 @@ final_df = final_df[[
     'productMpn'
 ]]
 
+# -------------------------- Save to CSV -------------------------- #
+
 # Save to CSV with semicolon delimiter
 try:
     final_df.to_csv(output_file, sep=';', index=False, encoding='utf-8')
-    print(f"Import file '{output_file}' has been created successfully.")
+    print(f"Import file '{
+          output_file}' has been created successfully with mocked data.")
 except Exception as e:
     raise Exception(f"Error writing to '{output_file}': {e}")
