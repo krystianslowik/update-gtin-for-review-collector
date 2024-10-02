@@ -1,3 +1,4 @@
+[![Python Tests](https://github.com/krystianslowik/update-gtin-for-review-collector/actions/workflows/python-tests.yml/badge.svg)](https://github.com/krystianslowik/update-gtin-for-review-collector/actions/workflows/python-tests.yml)
 # Prepare Review Collector file to update GTIN
 
 ## Description
